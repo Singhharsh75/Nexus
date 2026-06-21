@@ -36,6 +36,7 @@ export function hasPermission(role: WorkspaceRole, permission: Permission): bool
 export interface AuthenticatedRequest {
   user: AccessTokenPayload;
   correlationId: string;
+  params: Record<string, string>;
 }
 
 export interface AuthorizedRequest extends AuthenticatedRequest {
@@ -74,9 +75,11 @@ export function withAuth(handler: AuthHandler) {
       );
     }
 
+    const params = routeContext?.params ? await routeContext.params : {};
+
     log.info({ userId: payload.sub }, 'Authenticated request');
 
-    return handler(request, { user: payload, correlationId });
+    return handler(request, { user: payload, correlationId, params });
   };
 }
 
@@ -89,10 +92,7 @@ export function withRole(
       userId: authContext.user.sub,
     });
 
-    const url = new URL(request.url);
-    const pathSegments = url.pathname.split('/');
-    const workspacesIdx = pathSegments.indexOf('workspaces');
-    const workspaceId = workspacesIdx !== -1 ? pathSegments[workspacesIdx + 1] : undefined;
+    const workspaceId = authContext.params.id;
 
     if (!workspaceId) {
       return NextResponse.json(
