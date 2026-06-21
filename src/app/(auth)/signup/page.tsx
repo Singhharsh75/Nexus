@@ -23,6 +23,7 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -41,13 +42,19 @@ export default function SignupPage() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signUp({
+    const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
     });
 
     if (authError) {
       setError(authError.message);
+      setLoading(false);
+      return;
+    }
+
+    if (data.user && !data.session) {
+      setEmailSent(true);
       setLoading(false);
       return;
     }
@@ -59,8 +66,8 @@ export default function SignupPage() {
     });
 
     if (!res.ok) {
-      const data = await res.json();
-      setError(data.error ?? 'Failed to establish session');
+      const resData = await res.json();
+      setError(resData.error ?? 'Failed to establish session');
       setLoading(false);
       return;
     }
@@ -72,6 +79,30 @@ export default function SignupPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 dark:bg-zinc-950">
       <Card className="w-full max-w-md">
+        {emailSent ? (
+          <>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold">Check your email</CardTitle>
+              <CardDescription>
+                We sent a verification link to <span className="font-medium text-zinc-900 dark:text-zinc-100">{email}</span>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
+                Click the link in the email to verify your account, then come back to sign in.
+              </p>
+            </CardContent>
+            <CardFooter className="justify-center">
+              <Link
+                href="/login"
+                className="font-medium text-zinc-900 underline dark:text-zinc-100"
+              >
+                Go to sign in
+              </Link>
+            </CardFooter>
+          </>
+        ) : (
+        <>
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Create your account</CardTitle>
           <CardDescription>
@@ -138,6 +169,8 @@ export default function SignupPage() {
             </p>
           </CardFooter>
         </form>
+        </>
+        )}
       </Card>
     </div>
   );
