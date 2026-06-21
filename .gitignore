@@ -44,5 +44,7 @@ next-env.d.ts
 # claude
 CLAUDE.md
 SPEC.md
+AGENTS.md
+BUILD-STRATEGY.md
 PLAN-PHASE-*.md
 .claude
