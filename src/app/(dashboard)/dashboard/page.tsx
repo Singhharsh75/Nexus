@@ -117,7 +117,7 @@ export default function DashboardPage() {
           Workspaces
         </h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger>
+          <DialogTrigger render={<Button />}>
             Create Workspace
           </DialogTrigger>
           <DialogContent>

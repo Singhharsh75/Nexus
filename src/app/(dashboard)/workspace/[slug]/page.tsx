@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,15 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-
-interface Post {
-  id: string;
-  title: string | null;
-  content: string;
-  author_id: string;
-  embedding_status: string;
-  created_at: string;
-}
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useRealtimePosts } from '@/hooks/useRealtimePosts';
+import { usePresence } from '@/hooks/usePresence';
+import { createClient } from '@/lib/supabase/client';
+import type { Post } from '@/types/post';
 
 interface WorkspaceData {
   id: string;
@@ -44,6 +40,19 @@ export default function WorkspacePage() {
   const [error, setError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [currentRole, setCurrentRole] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | undefined>(undefined);
+  const hasPaginatedRef = useRef(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setCurrentUserId(data.user.id);
+        setCurrentUserEmail(data.user.email ?? undefined);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,8 +94,33 @@ export default function WorkspacePage() {
     return () => { cancelled = true; };
   }, [params.slug, router]);
 
+  const handleRealtimeInsert = useCallback((post: Post) => {
+    if (hasPaginatedRef.current) return;
+    setPosts((prev) => {
+      if (prev.some((p) => p.id === post.id)) return prev;
+      return [post, ...prev];
+    });
+  }, []);
+
+  const handleRealtimeDelete = useCallback((postId: string) => {
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+  }, []);
+
+  useRealtimePosts({
+    workspaceId: workspace?.id ?? null,
+    onInsert: handleRealtimeInsert,
+    onDelete: handleRealtimeDelete,
+  });
+
+  const { onlineUsers } = usePresence({
+    workspaceId: workspace?.id ?? null,
+    userId: currentUserId,
+    userEmail: currentUserEmail,
+  });
+
   async function loadMore() {
     if (!workspace || !nextCursor) return;
+    hasPaginatedRef.current = true;
     setLoadingMore(true);
     const res = await fetch(
       `/api/workspaces/${workspace.id}/posts?cursor=${encodeURIComponent(nextCursor)}`,
@@ -171,14 +205,39 @@ export default function WorkspacePage() {
             {workspace.members.length} member{workspace.members.length !== 1 ? 's' : ''} · {workspace.stats.post_count} post{workspace.stats.post_count !== 1 ? 's' : ''}
           </p>
         </div>
-        {currentRole === 'admin' && (
-          <Button
-            variant="outline"
-            onClick={() => router.push(`/workspace/${params.slug}/settings`)}
-          >
-            Settings
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {onlineUsers.length > 0 && (
+            <div className="flex items-center gap-1">
+              <div className="flex -space-x-2">
+                {onlineUsers.slice(0, 5).map((user) => (
+                  <Avatar
+                    key={user.userId}
+                    className="h-7 w-7 border-2 border-white dark:border-zinc-900"
+                    title={user.email ?? user.userId}
+                  >
+                    <AvatarFallback className="bg-green-100 text-xs text-green-700 dark:bg-green-900 dark:text-green-300">
+                      {(user.email ?? user.userId).charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+              </div>
+              {onlineUsers.length > 5 && (
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  +{onlineUsers.length - 5}
+                </span>
+              )}
+              <span className="ml-1 inline-block h-2 w-2 rounded-full bg-green-500" />
+            </div>
+          )}
+          {currentRole === 'admin' && (
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/workspace/${params.slug}/settings`)}
+            >
+              Settings
+            </Button>
+          )}
+        </div>
       </div>
 
       {canCreatePost && (

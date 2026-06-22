@@ -40,23 +40,6 @@ export const POST = withAuth(async (request: Request, ctx: AuthenticatedRequest)
     );
   }
 
-  const { error: memberError } = await supabase
-    .from('workspace_members')
-    .insert({
-      workspace_id: workspace.id,
-      user_id: ctx.user.sub,
-      role: 'admin',
-    });
-
-  if (memberError) {
-    log.error({ error: memberError }, 'Failed to add creator as admin');
-    await supabase.from('workspaces').delete().eq('id', workspace.id);
-    return NextResponse.json(
-      { error: 'Failed to create workspace' },
-      { status: 500, headers: { 'X-Request-ID': ctx.correlationId } },
-    );
-  }
-
   const duration = Date.now() - start;
   log.info({ workspaceId: workspace.id, slug, duration }, 'Workspace created');
 

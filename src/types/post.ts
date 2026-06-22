@@ -6,3 +6,14 @@ export const createPostSchema = z.object({
 });
 
 export type CreatePostInput = z.infer<typeof createPostSchema>;
+
+export interface Post {
+  id: string;
+  workspace_id: string;
+  author_id: string;
+  title: string | null;
+  content: string;
+  embedding_status: string;
+  created_at: string;
+  updated_at?: string;
+}
