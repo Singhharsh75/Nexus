@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useRealtimePosts } from '@/hooks/useRealtimePosts';
 import { usePresence } from '@/hooks/usePresence';
 import { createClient } from '@/lib/supabase/client';
+import { QueryPanel } from '@/components/workspace/query-panel';
 import type { Post } from '@/types/post';
 
 interface WorkspaceData {
@@ -350,6 +351,8 @@ export default function WorkspacePage() {
           </div>
         )}
       </div>
+
+      {workspace && <QueryPanel workspaceId={workspace.id} />}
     </div>
   );
 }
