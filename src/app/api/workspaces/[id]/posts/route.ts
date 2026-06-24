@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createRequestLogger } from '@/lib/logger';
 import { createPostSchema } from '@/types/post';
 import { getEmbedPostQueue, type EmbedPostJobData } from '@/lib/queue';
+import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch';
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -110,6 +111,13 @@ export const POST = withRole(async (request: Request, ctx: AuthorizedRequest) =>
   } catch (queueError) {
     log.error({ error: queueError, postId: post.id }, 'Failed to enqueue embed-post job');
   }
+
+  dispatchWebhookEvent(
+    ctx.workspaceId,
+    'post.created',
+    { post_id: post.id, title: post.title, author_id: post.author_id },
+    ctx.correlationId,
+  ).catch((err) => log.error({ error: err }, 'Failed to dispatch post.created webhook'));
 
   const duration = Date.now() - start;
   log.info({ postId: post.id, duration }, 'Post created');

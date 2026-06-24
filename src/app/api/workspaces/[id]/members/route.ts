@@ -3,6 +3,7 @@ import { withRole, type AuthorizedRequest } from '@/lib/auth/rbac';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createRequestLogger } from '@/lib/logger';
 import { inviteMemberSchema } from '@/types/member';
+import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch';
 
 export const GET = withRole(async (request: Request, ctx: AuthorizedRequest) => {
   const log = createRequestLogger(ctx.correlationId, {
@@ -123,6 +124,13 @@ export const POST = withRole(async (request: Request, ctx: AuthorizedRequest) =>
       { status: 500, headers: { 'X-Request-ID': ctx.correlationId } },
     );
   }
+
+  dispatchWebhookEvent(
+    ctx.workspaceId,
+    'member.joined',
+    { user_id: targetUserId, email, role },
+    ctx.correlationId,
+  ).catch((err) => log.error({ error: err }, 'Failed to dispatch member.joined webhook'));
 
   const duration = Date.now() - start;
   log.info({ memberId: member.id, targetUserId, role, duration }, 'Member added');

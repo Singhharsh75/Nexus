@@ -4,6 +4,7 @@ import { getOpenRouterClient } from './openrouter';
 import { generateEmbeddings } from './embeddings';
 import { getCachedAnswer, setCachedAnswer } from './semantic-cache';
 import type { RAGEvent, Source } from '@/types/query';
+import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch';
 
 const CHAT_MODEL = 'openai/gpt-4o-mini';
 
@@ -37,6 +38,8 @@ export async function* executeRAGQuery(params: {
     yield { type: 'delta', content: cached.answer };
     yield { type: 'done', cached: true, latencyMs: Date.now() - startTime };
 
+    const cachedLatencyMs = Date.now() - startTime;
+
     recordQueryHistory({
       workspaceId,
       userId,
@@ -44,8 +47,15 @@ export async function* executeRAGQuery(params: {
       answerText: cached.answer,
       sources: cached.sources,
       cached: true,
-      latencyMs: Date.now() - startTime,
+      latencyMs: cachedLatencyMs,
     }).catch((err) => log.error({ error: err }, 'Failed to record query history'));
+
+    dispatchWebhookEvent(
+      workspaceId,
+      'query.completed',
+      { user_id: userId, query: query.slice(0, 200), latency_ms: cachedLatencyMs, source_count: cached.sources.length, cached: true },
+      correlationId,
+    ).catch((err) => log.error({ error: err }, 'Failed to dispatch query.completed webhook'));
 
     return;
   }
@@ -166,6 +176,13 @@ export async function* executeRAGQuery(params: {
     cached: false,
     latencyMs,
   }).catch((err) => log.error({ error: err }, 'Failed to record query history'));
+
+  dispatchWebhookEvent(
+    workspaceId,
+    'query.completed',
+    { user_id: userId, query: query.slice(0, 200), latency_ms: latencyMs, source_count: sources.length, cached: false },
+    correlationId,
+  ).catch((err) => log.error({ error: err }, 'Failed to dispatch query.completed webhook'));
 }
 
 async function recordQueryHistory(params: {

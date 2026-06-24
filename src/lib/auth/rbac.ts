@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { verifyAccessToken, type AccessTokenPayload } from './jwt';
 import { getAccessToken } from './cookies';
 import { getCorrelationId, createRequestLogger } from '@/lib/logger';
@@ -56,11 +57,17 @@ type RoleHandler = (
 
 export function withAuth(handler: AuthHandler) {
   return async (request: Request, routeContext?: { params?: Promise<Record<string, string>> }) => {
+    const start = Date.now();
     const correlationId = getCorrelationId(request.headers);
-    const log = createRequestLogger(correlationId);
+    const url = new URL(request.url);
+    const method = request.method;
+    const path = url.pathname;
+    const log = createRequestLogger(correlationId, { method, path });
 
     const token = await getAccessToken();
     if (!token) {
+      const duration_ms = Date.now() - start;
+      log.info({ statusCode: 401, duration_ms }, 'Request completed');
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401, headers: { 'X-Request-ID': correlationId } },
@@ -69,6 +76,8 @@ export function withAuth(handler: AuthHandler) {
 
     const payload = await verifyAccessToken(token);
     if (!payload || !payload.sub) {
+      const duration_ms = Date.now() - start;
+      log.info({ statusCode: 401, duration_ms }, 'Request completed');
       return NextResponse.json(
         { error: 'Invalid or expired token' },
         { status: 401, headers: { 'X-Request-ID': correlationId } },
@@ -77,9 +86,37 @@ export function withAuth(handler: AuthHandler) {
 
     const params = routeContext?.params ? await routeContext.params : {};
 
+    Sentry.setUser({ id: payload.sub });
+    Sentry.setTag('correlationId', correlationId);
+    Sentry.addBreadcrumb({
+      category: 'auth',
+      message: 'Authenticated request',
+      data: { correlationId },
+      level: 'info',
+    });
+
     log.info({ userId: payload.sub }, 'Authenticated request');
 
-    return handler(request, { user: payload, correlationId, params });
+    try {
+      const response = await handler(request, { user: payload, correlationId, params });
+      const duration_ms = Date.now() - start;
+      log.info(
+        { userId: payload.sub, statusCode: response.status, duration_ms },
+        'Request completed',
+      );
+      return response;
+    } catch (error) {
+      const duration_ms = Date.now() - start;
+      log.error(
+        { userId: payload.sub, duration_ms, error, stack: error instanceof Error ? error.stack : undefined },
+        'Request failed with unhandled error',
+      );
+      Sentry.captureException(error);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500, headers: { 'X-Request-ID': correlationId } },
+      );
+    }
   };
 }
 
@@ -126,6 +163,14 @@ export function withRole(
         { status: 403, headers: { 'X-Request-ID': authContext.correlationId } },
       );
     }
+
+    Sentry.setTag('workspaceId', workspaceId);
+    Sentry.addBreadcrumb({
+      category: 'rbac',
+      message: `Authorized as ${role}`,
+      data: { workspaceId, correlationId: authContext.correlationId },
+      level: 'info',
+    });
 
     log.info({ workspaceId, role }, 'Authorized request');
 
