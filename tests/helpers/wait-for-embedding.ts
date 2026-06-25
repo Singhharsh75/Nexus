@@ -9,8 +9,7 @@ export async function waitForEmbedding(
     interval = 1_000,
   }: { timeout?: number; interval?: number } = {},
 ): Promise<void> {
-  const baseURL =
-    page.context().baseURL() ?? 'http://localhost:3000';
+  const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000';
 
   const deadline = Date.now() + timeout;
 

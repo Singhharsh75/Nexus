@@ -6,7 +6,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key-placeholder';
 process.env.REDIS_URL = 'redis://localhost:6379';
 process.env.OPENROUTER_API_KEY = 'test-openrouter-key-placeholder';
 process.env.JWT_SECRET = 'test-jwt-secret-that-is-at-least-32-characters-long';
-process.env.NODE_ENV = 'test';
+(process.env as Record<string, string>).NODE_ENV = 'test';
 
 const cookieStore = new Map<string, string>();
 
