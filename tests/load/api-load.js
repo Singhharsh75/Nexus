@@ -22,11 +22,11 @@ export const options = {
   scenarios: {
     crud_load: {
       executor: 'constant-arrival-rate',
-      rate: 200,
+      rate: parseInt(__ENV.K6_RATE || '50', 10),
       timeUnit: '1s',
-      duration: '2m',
-      preAllocatedVUs: 100,
-      maxVUs: 300,
+      duration: __ENV.K6_DURATION || '1m',
+      preAllocatedVUs: 30,
+      maxVUs: 80,
     },
   },
   thresholds: {

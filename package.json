@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "worker:dev": "tsx watch worker/index.ts"
+    "worker:dev": "tsx watch --env-file=.env.local worker/index.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

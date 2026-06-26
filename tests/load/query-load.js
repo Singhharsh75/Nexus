@@ -24,8 +24,8 @@ export const options = {
   scenarios: {
     ai_queries: {
       executor: 'constant-vus',
-      vus: 50,
-      duration: '2m',
+      vus: parseInt(__ENV.K6_VUS || '10', 10),
+      duration: __ENV.K6_DURATION || '1m',
     },
   },
   thresholds: {

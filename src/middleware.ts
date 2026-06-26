@@ -1,54 +1,52 @@
-import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
 
 const PUBLIC_ROUTES = ['/login', '/signup', '/api/auth/callback', '/api/health'];
+const ACCESS_TOKEN_COOKIE = 'nexus-access-token';
+const REFRESH_TOKEN_COOKIE = 'nexus-refresh-token';
+
+function getSecret(): Uint8Array {
+  return new TextEncoder().encode(process.env.JWT_SECRET!);
+}
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            request.cookies.set(name, value),
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          );
-        },
-      },
-    },
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const isPublicRoute = PUBLIC_ROUTES.some((route) =>
     request.nextUrl.pathname.startsWith(route),
   );
   const isApiRoute = request.nextUrl.pathname.startsWith('/api');
 
-  if (!user && !isPublicRoute && !isApiRoute) {
+  const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
+  const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
+
+  let isAuthenticated = false;
+
+  if (accessToken) {
+    try {
+      await jwtVerify(accessToken, getSecret());
+      isAuthenticated = true;
+    } catch {
+      // Token expired or invalid
+    }
+  }
+
+  // If JWT expired but refresh token exists, let the page load —
+  // client-side apiFetch will handle 401 → refresh on the first API call.
+  // This prevents redirect loops when the access token expires.
+  const hasSession = isAuthenticated || !!refreshToken;
+
+  if (!hasSession && !isPublicRoute && !isApiRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 
-  if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
+  if (hasSession && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
   }
 
-  return supabaseResponse;
+  return NextResponse.next({ request });
 }
 
 export const config = {
