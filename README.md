@@ -43,35 +43,35 @@ Nexus is a multi-user workspace where team posts are automatically embedded and 
 ```mermaid
 graph TB
     subgraph Client
-        UI["Next.js App Router<br/>React + Tailwind + Shadcn/UI"]
+        UI[Next.js App Router - React + Tailwind + Shadcn/UI]
     end
 
-    subgraph Server["Next.js Server"]
+    subgraph Server[Next.js Server]
         API[API Routes]
         MW[Auth + RBAC Middleware]
         RL[Rate Limiter]
         RAG[RAG Pipeline]
     end
 
-    subgraph Worker["BullMQ Worker"]
+    subgraph BackgroundWorker[BullMQ Worker]
         EMB[embed-post]
         WH[webhook-deliver]
         RE[reindex-workspace]
     end
 
-    subgraph Data["Data Layer"]
-        SB[(Supabase<br/>PostgreSQL + pgvector)]
-        RD[(Redis / Upstash<br/>Cache + Queues)]
-        RT{{"Supabase Realtime<br/>CDC + Presence"}}
+    subgraph Data[Data Layer]
+        SB[(Supabase - PostgreSQL + pgvector)]
+        RD[(Redis / Upstash - Cache + Queues)]
+        RT[Supabase Realtime - CDC + Presence]
     end
 
-    subgraph External
-        OR[OpenRouter API<br/>GPT-4o / Claude / Llama]
-        NE[nomic-embed-text<br/>Embeddings]
+    subgraph Ext[External Services]
+        OR[OpenRouter API - GPT-4o / Claude / Llama]
+        NE[nomic-embed-text - Embeddings]
     end
 
     UI -->|HTTPS| API
-    UI <-->|WebSocket| RT
+    UI ---|WebSocket| RT
     API --> MW --> RL
     API --> RAG
     RAG -->|Similarity Search| SB
@@ -82,7 +82,7 @@ graph TB
     EMB -->|Process Queue| RD
     EMB -->|Generate Embeddings| NE
     EMB -->|Store Chunks| SB
-    WH -->|POST + HMAC| External
+    WH -->|POST + HMAC| Ext
     RT -->|Postgres Changes| SB
     API -->|CRUD| SB
 ```
