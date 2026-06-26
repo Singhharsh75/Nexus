@@ -2,6 +2,28 @@
   "name": "nexus",
   "version": "0.1.0",
   "private": true,
+  "description": "Real-time collaborative workspace with AI-powered semantic search over team knowledge",
+  "author": "Harsh Singh",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Singhharsh75/Nexus.git"
+  },
+  "keywords": [
+    "nextjs",
+    "typescript",
+    "supabase",
+    "pgvector",
+    "rag",
+    "semantic-search",
+    "realtime",
+    "bullmq",
+    "openrouter",
+    "collaboration"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
