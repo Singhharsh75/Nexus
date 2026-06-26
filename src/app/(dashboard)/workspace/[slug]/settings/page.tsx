@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { apiFetch } from '@/lib/utils/api-client';
 
 interface Member {
   id: string;
@@ -79,7 +80,7 @@ export default function SettingsPage() {
   const [memberError, setMemberError] = useState<string | null>(null);
 
   const resolveWorkspace = useCallback(async (): Promise<WorkspaceInfo | null> => {
-    const res = await fetch('/api/workspaces');
+    const res = await apiFetch('/api/workspaces');
     if (!res.ok) return null;
     const list = await res.json();
     const ws = list.find((w: { slug: string }) => w.slug === params.slug);
@@ -92,7 +93,7 @@ export default function SettingsPage() {
   }, [params.slug, router]);
 
   const fetchMembers = useCallback(async (workspaceId: string) => {
-    const res = await fetch(`/api/workspaces/${workspaceId}/members`);
+    const res = await apiFetch(`/api/workspaces/${workspaceId}/members`);
     if (res.ok) {
       setMembers(await res.json());
     }
@@ -117,7 +118,7 @@ export default function SettingsPage() {
     setSaveSuccess(false);
     setSaving(true);
 
-    const res = await fetch(`/api/workspaces/${workspace.id}`, {
+    const res = await apiFetch(`/api/workspaces/${workspace.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: wsName, slug: wsSlug }),
@@ -143,7 +144,7 @@ export default function SettingsPage() {
     setInviteError(null);
     setInviting(true);
 
-    const res = await fetch(`/api/workspaces/${workspace.id}/members`, {
+    const res = await apiFetch(`/api/workspaces/${workspace.id}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
@@ -167,7 +168,7 @@ export default function SettingsPage() {
     if (!workspace) return;
     setMemberError(null);
 
-    const res = await fetch(
+    const res = await apiFetch(
       `/api/workspaces/${workspace.id}/members/${userId}`,
       {
         method: 'PATCH',
@@ -189,7 +190,7 @@ export default function SettingsPage() {
     if (!workspace) return;
     setMemberError(null);
 
-    const res = await fetch(
+    const res = await apiFetch(
       `/api/workspaces/${workspace.id}/members/${userId}`,
       { method: 'DELETE' },
     );
@@ -205,7 +206,7 @@ export default function SettingsPage() {
 
   async function handleDeleteWorkspace() {
     if (!workspace) return;
-    const res = await fetch(`/api/workspaces/${workspace.id}`, {
+    const res = await apiFetch(`/api/workspaces/${workspace.id}`, {
       method: 'DELETE',
     });
     if (res.ok) {

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { apiFetch } from '@/lib/utils/api-client';
 
 interface Workspace {
   id: string;
@@ -38,11 +39,7 @@ export default function DashboardPage() {
 
   async function loadWorkspaces() {
     setFetchError(null);
-    const res = await fetch('/api/workspaces');
-    if (res.status === 401) {
-      router.push('/login');
-      return;
-    }
+    const res = await apiFetch('/api/workspaces');
     if (!res.ok) {
       setFetchError('Failed to load workspaces');
       setLoading(false);
@@ -57,12 +54,8 @@ export default function DashboardPage() {
     let cancelled = false;
     (async () => {
       setFetchError(null);
-      const res = await fetch('/api/workspaces');
+      const res = await apiFetch('/api/workspaces');
       if (cancelled) return;
-      if (res.status === 401) {
-        router.push('/login');
-        return;
-      }
       if (!res.ok) {
         setFetchError('Failed to load workspaces');
         setLoading(false);
@@ -73,7 +66,7 @@ export default function DashboardPage() {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [router]);
+  }, []);
 
   function handleNameChange(value: string) {
     setName(value);
@@ -90,7 +83,7 @@ export default function DashboardPage() {
     setError(null);
     setCreating(true);
 
-    const res = await fetch('/api/workspaces', {
+    const res = await apiFetch('/api/workspaces', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, slug }),

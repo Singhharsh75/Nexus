@@ -22,37 +22,41 @@ export async function checkRateLimit(
   endpoint: string,
   config: RateLimitConfig,
 ): Promise<RateLimitResult> {
-  const redis = getRedisClient();
-  const key = `ratelimit:${userId}:${endpoint}`;
-  const now = Date.now();
-  const windowStart = now - config.windowMs;
+  try {
+    const redis = getRedisClient();
+    const key = `ratelimit:${userId}:${endpoint}`;
+    const now = Date.now();
+    const windowStart = now - config.windowMs;
 
-  const pipeline = redis.pipeline();
-  pipeline.zremrangebyscore(key, 0, windowStart);
-  pipeline.zadd(key, now.toString(), `${now}:${Math.random()}`);
-  pipeline.zcard(key);
-  pipeline.pexpire(key, config.windowMs);
-  const results = await pipeline.exec();
+    const pipeline = redis.pipeline();
+    pipeline.zremrangebyscore(key, 0, windowStart);
+    pipeline.zadd(key, now.toString(), `${now}:${Math.random()}`);
+    pipeline.zcard(key);
+    pipeline.pexpire(key, config.windowMs);
+    const results = await pipeline.exec();
 
-  const count = (results?.[2]?.[1] as number) ?? 0;
+    const count = (results?.[2]?.[1] as number) ?? 0;
 
-  if (count > config.maxRequests) {
-    const oldestInWindow = await redis.zrange(key, 0, 0, 'WITHSCORES');
-    const oldestTimestamp = oldestInWindow.length >= 2 ? Number(oldestInWindow[1]) : now;
-    const retryAfterMs = oldestTimestamp + config.windowMs - now;
+    if (count > config.maxRequests) {
+      const oldestInWindow = await redis.zrange(key, 0, 0, 'WITHSCORES');
+      const oldestTimestamp = oldestInWindow.length >= 2 ? Number(oldestInWindow[1]) : now;
+      const retryAfterMs = oldestTimestamp + config.windowMs - now;
+
+      return {
+        allowed: false,
+        remaining: 0,
+        retryAfterMs: Math.max(retryAfterMs, 1000),
+      };
+    }
 
     return {
-      allowed: false,
-      remaining: 0,
-      retryAfterMs: Math.max(retryAfterMs, 1000),
+      allowed: true,
+      remaining: config.maxRequests - count,
+      retryAfterMs: null,
     };
+  } catch {
+    return { allowed: true, remaining: -1, retryAfterMs: null };
   }
-
-  return {
-    allowed: true,
-    remaining: config.maxRequests - count,
-    retryAfterMs: null,
-  };
 }
 
 export function rateLimitResponse(

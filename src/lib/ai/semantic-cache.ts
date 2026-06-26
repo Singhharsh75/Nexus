@@ -33,13 +33,13 @@ export async function getCachedAnswer(
   query: string,
   workspaceId: string,
 ): Promise<CachedAnswer | null> {
-  const redis = getRedisClient();
-  const key = cacheKey(workspaceId, query);
-  const cached = await redis.get(key);
-
-  if (!cached) return null;
-
   try {
+    const redis = getRedisClient();
+    const key = cacheKey(workspaceId, query);
+    const cached = await redis.get(key);
+
+    if (!cached) return null;
+
     return JSON.parse(cached) as CachedAnswer;
   } catch {
     return null;
@@ -51,7 +51,11 @@ export async function setCachedAnswer(
   workspaceId: string,
   data: CachedAnswer,
 ): Promise<void> {
-  const redis = getRedisClient();
-  const key = cacheKey(workspaceId, query);
-  await redis.set(key, JSON.stringify(data), 'EX', CACHE_TTL_SECONDS);
+  try {
+    const redis = getRedisClient();
+    const key = cacheKey(workspaceId, query);
+    await redis.set(key, JSON.stringify(data), 'EX', CACHE_TTL_SECONDS);
+  } catch {
+    // Cache write failures are non-critical
+  }
 }

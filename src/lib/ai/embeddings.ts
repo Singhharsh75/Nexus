@@ -1,6 +1,7 @@
 import type OpenAI from 'openai';
 
-const EMBEDDING_MODEL = 'nomic-ai/nomic-embed-text-v1.5';
+const EMBEDDING_MODEL = 'openai/text-embedding-3-small';
+const EMBEDDING_DIMENSIONS = 768;
 const BATCH_SIZE = 20;
 
 export async function generateEmbeddings(
@@ -19,6 +20,7 @@ export async function generateEmbeddings(
       client.embeddings.create({
         model: EMBEDDING_MODEL,
         input: batch,
+        dimensions: EMBEDDING_DIMENSIONS,
       }),
     ),
   );

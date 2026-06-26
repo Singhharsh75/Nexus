@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useRealtimePosts } from '@/hooks/useRealtimePosts';
 import { usePresence } from '@/hooks/usePresence';
 import { createClient } from '@/lib/supabase/client';
+import { apiFetch } from '@/lib/utils/api-client';
 import { QueryPanel } from '@/components/workspace/query-panel';
 import type { Post } from '@/types/post';
 
@@ -58,7 +59,7 @@ export default function WorkspacePage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const listRes = await fetch('/api/workspaces');
+      const listRes = await apiFetch('/api/workspaces');
       if (cancelled || !listRes.ok) return;
       const allWorkspaces = await listRes.json();
       const ws = allWorkspaces.find(
@@ -72,8 +73,8 @@ export default function WorkspacePage() {
       setCurrentRole(ws.role);
 
       const [detailRes, postsRes] = await Promise.all([
-        fetch(`/api/workspaces/${ws.id}`),
-        fetch(`/api/workspaces/${ws.id}/posts`),
+        apiFetch(`/api/workspaces/${ws.id}`),
+        apiFetch(`/api/workspaces/${ws.id}/posts`),
       ]);
 
       if (cancelled) return;
@@ -123,7 +124,7 @@ export default function WorkspacePage() {
     if (!workspace || !nextCursor) return;
     hasPaginatedRef.current = true;
     setLoadingMore(true);
-    const res = await fetch(
+    const res = await apiFetch(
       `/api/workspaces/${workspace.id}/posts?cursor=${encodeURIComponent(nextCursor)}`,
     );
     if (res.ok) {
@@ -141,7 +142,7 @@ export default function WorkspacePage() {
     setError(null);
     setCreating(true);
 
-    const res = await fetch(`/api/workspaces/${workspace.id}/posts`, {
+    const res = await apiFetch(`/api/workspaces/${workspace.id}/posts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -167,7 +168,7 @@ export default function WorkspacePage() {
   async function handleDeletePost(postId: string) {
     if (!workspace) return;
     setDeleteError(null);
-    const res = await fetch(
+    const res = await apiFetch(
       `/api/workspaces/${workspace.id}/posts/${postId}`,
       { method: 'DELETE' },
     );

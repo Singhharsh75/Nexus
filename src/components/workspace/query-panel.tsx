@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { apiFetch } from '@/lib/utils/api-client';
 import type { RAGEvent, Source } from '@/types/query';
 
 interface QueryPanelProps {
@@ -41,7 +42,7 @@ export function QueryPanel({ workspaceId }: QueryPanelProps) {
       abortRef.current = controller;
 
       try {
-        const res = await fetch(`/api/workspaces/${workspaceId}/query`, {
+        const res = await apiFetch(`/api/workspaces/${workspaceId}/query`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: trimmed }),

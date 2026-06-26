@@ -35,6 +35,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { apiFetch } from '@/lib/utils/api-client';
 
 interface Webhook {
   id: string;
@@ -85,7 +86,7 @@ export default function WebhooksPage() {
   const [deliveriesLoading, setDeliveriesLoading] = useState(false);
 
   const resolveWorkspace = useCallback(async (): Promise<WorkspaceInfo | null> => {
-    const res = await fetch('/api/workspaces');
+    const res = await apiFetch('/api/workspaces');
     if (!res.ok) return null;
     const list = await res.json();
     const ws = list.find((w: { slug: string }) => w.slug === params.slug);
@@ -98,7 +99,7 @@ export default function WebhooksPage() {
   }, [params.slug, router]);
 
   const fetchWebhooks = useCallback(async (workspaceId: string) => {
-    const res = await fetch(`/api/workspaces/${workspaceId}/webhooks`);
+    const res = await apiFetch(`/api/workspaces/${workspaceId}/webhooks`);
     if (res.ok) {
       const data = await res.json();
       setWebhooks(data.data ?? []);
@@ -121,7 +122,7 @@ export default function WebhooksPage() {
     setCreateError(null);
     setCreating(true);
 
-    const res = await fetch(`/api/workspaces/${workspace.id}/webhooks`, {
+    const res = await apiFetch(`/api/workspaces/${workspace.id}/webhooks`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -150,7 +151,7 @@ export default function WebhooksPage() {
     if (!workspace) return;
     setError(null);
 
-    const res = await fetch(
+    const res = await apiFetch(
       `/api/workspaces/${workspace.id}/webhooks/${webhookId}`,
       { method: 'DELETE' },
     );
@@ -173,7 +174,7 @@ export default function WebhooksPage() {
     setViewingWebhookId(webhookId);
     setDeliveriesLoading(true);
 
-    const res = await fetch(
+    const res = await apiFetch(
       `/api/workspaces/${workspace.id}/webhooks/${webhookId}/deliveries`,
     );
 

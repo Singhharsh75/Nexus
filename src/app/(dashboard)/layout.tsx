@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { AuthListener } from '@/components/auth-listener';
 
 export default async function DashboardLayout({
   children,
@@ -17,6 +18,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <AuthListener />
       <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <a href="/dashboard" className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
